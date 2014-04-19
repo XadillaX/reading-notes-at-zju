@@ -134,3 +134,56 @@ RDFStore-js的存储模型是基于一个将主体、谓语、对象和附加的
 
 而在Node.js中的持久化中，主要使用的是MongoDB 作为RDF图的存储引擎，而RDF也会被编码为MongoDB中的文档。
 
+#### SPARQL查询分析和过程
+
+应答查询流程的第一步是先要解析SPARQL语句。整个过程分为两步。首先，文本SPARQL查询将会被解析为一个复杂的JSON对象，其代表了一棵对于该查询抽象的语法树。第二步，语法树会被转化为一个不同的包含等价SPARQL表达式的JSON对象。
+
+解析步骤的执行使用了一个解析表达式语法（Parsing Expression Grammar, PEG ），它能够解析SPARQL查询、SPARQL1.1、SPARQL更新语句，此外它还能解析Turtle文档。
+
+#### 线程执行
+
+执行在浏览器中或者Node.js中的JavaScript程序，除了Web Workers API之外，都被限制在单线程当中。为了防止I/O密集运算造成的阻塞，JavaScript平台提供了事件驱动的异步接口。
+
+不过JavaScript应用程序是单线程的这一点有一个例外，就是Web Workers API。这个API允许JavaScript代码在不同的沙箱线程中执行。两个线程之间不能共享任何状态，通过专门的字符串消息交换来通讯。
+
+RDFStore-js充分利用了这个API的优势，在不同的线程中查询SPARQL语句。上层为“Store”模块。这个模块定义了对外的最终接口，即客户端代码能调用的一系列异步函数。如果Web Worker API被探测到，那么这个模块将会在Web Worker中被加载，另一个“RDFStoreClient”模块会在主线程中被加载。两个模块都是先了相同的接口，但是调用RDFStoreClient模块中的方法实际上是发送消息给先前创建好的Web Worker中。当最终查询结果出来的时候，会触发时间通过一个异步回调的函数返回给客户端代码。两个线程之间结果和请求参数的编码和解码是由标准JSON中的toStringSerialization来完成的。
+
+此外，如果浏览器不支持Web Workers，那么Store模块会直接创建在主线程当中，而不会说出现不兼容的情况或者需要客户端代码做额外的修改。
+
+#### 评量基准
+
+RDFStore-js的性能评估已在性能平均的笔记本电脑上使用LUBM 标准在不同的浏览器中完成。测试用例使用LUBM数据生成器生成并且转化为JSON-LD格式。数据最终在一个RDF图中加载了100545组三元组。
+
+表5-1展示了以毫秒为单位的结果。由于RDFStore-js不支持推理，其中一些评估查询使用UNION子句被重写为显式模式。除此之外，还额外添加了一个简单返回所有三元组的查询。查询文本 以及运行测试的代码都被包含在了分发出来的类库源代码中。
+
+![表5-1](5-1.png)
+
+#### 事件API
+
+JavaScript客户端应用需要响应用户事件来改变应用状态。其导致的结果就是当这些状态结果改变的时候应用的不同组件需要被更新。
+
+为了更简易地构造这类事件的调度逻辑，RDFStore-js添加了一个事件API。作为公开接口的其它部分，这个事件API可以在两种不同的级别被使用——SPARQL查询级别和RDF结点级别。
+
+在SPARQL查询级别，客户端代码可以通过调用 `startObservingQuery/stopObservingQuery` 函数来订阅SPARQL查询。每当RDF图中的修改引起了查询结果的改变，而其又被事件API跟踪的时候，新的结果集将会被返回到订阅的回调函数当中。
+
+在RDF节点级别，`startObservingNode/stopObservingNode` 函数调用之后，每当RDF图的一个节点状态被改变的时候，节点新的值就会根据RDF接口规范被返回给回调函数。
+
+#### JavaScript-RDF应用类库
+
+SemanticKO 是一个补充的应用程序开发库的实现，建立使用RDFStore-js存储的RDF图和HTML文档中的DOM树之间双向绑定的声明。该库是从KnockoutJS 的Repo当中Fork过来的。KnockoutJS是一个实现了MVVM(Model-View-ViewModel)模式的JavaScript类库。
+
+下方的代码片段展示了一个例子：
+
+![图5-2](5-2.png)
+
+绑定的JavaScript节点对象通过事件API订阅了在RDFStore-js中的RDF节点的修改事件。每当RDF节点的值改变了，节点对象就会被通知并且修改相应观察的属性值。被观察的属性变化触发了绑定到相关RDF节点的DOM结点依赖的重判断，或者触发在data-bind属性中声明的值的变化。作为结果，一个被更新的DOM树将会映射出RDF图的更新。相互的，DOM树的变化也会自动更新到相应的RDF节点中去。
+
+## 小结
+
+RDFStore-js实现了一个可以用作客户端应用的数据层基础的RDF存储功能，它支持持久化存储、查询、操作从不同源获取的数据并且非常简单地合并在一起，这得益于RDF数据模型和SPARQL查询语言。
+
+RDFStore-js展示了RDF数据是如何存储的以及SPARQL查询语言可以在Web开发中扮演一个相当重要的角色，不仅仅是服务端程序的持久层，也可以在客户端程序的中间件层。
+
+该存储还提供了不同粒度下的API，有的基于原始SPARQL查询和RDF图的序列，还有的API是将RDF节点转化为JSON对象进行操作。这个API也是一个使用最新的语义标准在JavaScript应用中集成RDF数据的例子。
+
+此外，RDFStore-js还提供了事件API，可以很好的适应JavaScript异步执行的模型。SemanticKO就是基于这个事件API构建的提供Web应用开发的类库，它只需要在DOM树和RDF图之间声明绑定就可以在应用中进行数据值的双向更新。
