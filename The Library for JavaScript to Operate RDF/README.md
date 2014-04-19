@@ -187,3 +187,13 @@ RDFStore-js展示了RDF数据是如何存储的以及SPARQL查询语言可以在
 该存储还提供了不同粒度下的API，有的基于原始SPARQL查询和RDF图的序列，还有的API是将RDF节点转化为JSON对象进行操作。这个API也是一个使用最新的语义标准在JavaScript应用中集成RDF数据的例子。
 
 此外，RDFStore-js还提供了事件API，可以很好的适应JavaScript异步执行的模型。SemanticKO就是基于这个事件API构建的提供Web应用开发的类库，它只需要在DOM树和RDF图之间声明绑定就可以在应用中进行数据值的双向更新。
+
+## 参考文献
+
+* [1] Antonio Garrote Hernández, María N. Moreno García. A JavaScript RDF s-tore and application library for linked data client applications[C]// ***World Wide Web Conference 2012.*** [s. n.]: [s. n.], 2012.
+* [2] W3C Working Group. RDF 1.1 Primer[EB/OL]. [2014-02-25] http://www.w3.org/TR/2014/NOTE-rdf11-primer-20140225/
+* [3] 赵建建. XML/RDF技术在数字图书馆信息资源整合中的应用[J]. ***Inner Mongolia Science Technology & Economy,*** 2013-1: 68-71.
+* [4] J. Smith. WPF Apps With the Model-View-ViewModel Design Patter[J]. ***MSDN Magazine,*** 2009-2.
+* [5] 刘一宁. 语义网主要技术发展分析[J]. ***Information Research,*** 2011-9.
+* [6] 刘立. MVVM模式分析与应用[J]. ***Microcomputer Applications,*** 2012-12: 57-60.
+* [7] Guillermo Rauch. Smashing Node.js – Javascript Everywhere[M]. America: ***Wiley,*** 2012.
